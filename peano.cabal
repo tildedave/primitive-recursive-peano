@@ -1,0 +1,29 @@
+Name:		primitive-recursive-peano
+Version:	1.0
+License:	OtherLicense
+Cabal-Version:	>= 1.2
+License-File:	LICENSE
+Author:		Dave King
+Homepage:	https://sites.google.com/site/primitiverecursivepeano/
+Category:	Mathematics
+Synopsis:	An implementation of the theory of Peano 
+		arithmetic using primitive recursion.
+Build-Type: 	Custom
+
+Library
+    Build-Depends:		base >= 4.0
+
+flag test
+  description: Build test program.
+  default:     False
+
+Executable main
+  main-is:		Main.hs
+  Hs-Source-Dirs:	src
+
+Executable test
+   hs-source-dirs: test, src
+   main-is:	   Test.hs
+   build-depends:  base >= 4.0, HUnit >= 1.2, QuickCheck >= 2.0
+   if !flag(test)
+      buildable: False
