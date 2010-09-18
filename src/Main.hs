@@ -15,7 +15,7 @@
 module Main
     where
 
-import PrimitiveRecursive
+import PrimitiveRecursion
 import Test.HUnit
 
 main = putStrLn "Hello, world!"

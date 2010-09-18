@@ -1,15 +1,15 @@
-module PrimitiveRecursive
+module PrimitiveRecursion
     where
 
 import Natural
 import Debug.Trace
 
-data PRFunction = 
+data Function = 
     Zero |
     Successor | 
     Projection Natural Natural | 
-    Composition Natural Natural PRFunction [PRFunction] |
-    Recursion Natural PRFunction PRFunction 
+    Composition Natural Natural Function [Function] |
+    Recursion Natural Function Function 
     deriving Show
 
 arity exp = 

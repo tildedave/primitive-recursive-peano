@@ -1,10 +1,10 @@
-module TestPrimitiveRecursive 
+module TestPrimitiveRecursion
     where
 import Test.HUnit
 import Test.QuickCheck
 
 import Natural
-import PrimitiveRecursive
+import PrimitiveRecursion
 
 instance Arbitrary Natural where
     arbitrary =
