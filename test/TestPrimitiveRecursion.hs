@@ -22,4 +22,15 @@ checkSubtraction x y = eval subtraction [x,y] == (if (y < x) then 0 else y - x)
 checkMultiplication :: Natural -> Natural -> Bool
 checkMultiplication x y = eval multiplication [x,y] == x * y
 
-quickChecks = [ checkAddition, checkSubtraction, checkMultiplication ]
+checkIdentity :: Natural -> Bool
+checkIdentity x = eval equals [x,x] == 1
+
+checkNonIdentity :: Natural -> Natural -> Bool
+checkNonIdentity x y = eval equals [x,y] == if (x == y) then 1 else 0
+
+doQuickChecks = do
+  quickCheck checkAddition
+  quickCheck checkSubtraction
+  quickCheck checkMultiplication
+  quickCheck checkIdentity
+  quickCheck checkNonIdentity

@@ -6,4 +6,4 @@ import Control.Monad
 import qualified TestPrimitiveRecursion
 
 main = 
-    do forM TestPrimitiveRecursion.quickChecks quickCheck 
+    do TestPrimitiveRecursion.doQuickChecks

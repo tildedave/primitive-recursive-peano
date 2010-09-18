@@ -2,7 +2,6 @@ module PrimitiveRecursion
     where
 
 import Natural
-import Debug.Trace
 
 data Function = 
     Zero |
@@ -33,11 +32,20 @@ wff exp =
           (case gs of 
             [] -> (arity f == k)
             a -> let gsArity = (map arity gs) 
-                             in
-                               (arity f == k) && (head gsArity == m) && 
-                               (allSame gsArity) && (wff f) && (wffList gs))
-      Recursion k f g -> (wff f) && (wff g) && (arity f == k) && 
-                        (arity g == k + 2)
+                     wffComposition = (arity f == k) && (head gsArity == m) && 
+                                      (allSame gsArity) && (wff f) && (wffList gs)
+                 in
+                   if (wffComposition) then 
+                       True 
+                   else
+                       error ("Invalid composition: " ++ (show exp) ++ " f arity: " ++ show (arity f) ++ " arity of gs: " ++ (show gsArity)))
+      Recursion k f g -> let wffRecursion = (wff f) && (wff g) && (arity f == k) && 
+                                            (arity g == k + 2)
+                         in
+                           if (wffRecursion) then
+                               True
+                           else
+                               error ("Invalid recursion: " ++ show (exp))
     where wffList es = (foldr (&&) True (map wff es))
 
 
@@ -128,6 +136,14 @@ prIf n f g = let baseFunction = f
 prCondZero h f g = let n = arity h 
                    in 
                      Composition (n+1) n (prIf n f g) (h:[(Projection k n) | k <- [1..n]])
+-- x == y if x \< y and y \< x
+equals = prCondZero
+         (Composition 2 2 lt [(Projection 1 2),(Projection 2 2)])
+         (prCondZero
+          (Composition 2 2 lt [(Projection 2 2),(Projection 1 2)])
+          (always 2 (constant 1))
+          (always 2 (constant 0)))
+         (always 2 (constant 0))
 
 -- prFoldLeft(f,i,x1...xn) = f(i,f(x1,f(x2,...,f(xn-1,xn))))
 prFoldArgsLeft n f i = 
