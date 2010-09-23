@@ -266,12 +266,13 @@ exists f p =
         n = k - 1
         muSearch = mu f p
     in
-      condZero (comp2 equals muSearch p) (always n (constant 1)) (always n (constant 0))
+      condZero (comp2 gte muSearch p) (always n (constant 1)) (always n (constant 0))
 
 -- modCheck c d a b = b * d + c == a
-modCheck = (comp2 equals (comp2 addition (comp2 multiplication (Projection 2 4) (Projection 4 4)) (Projection 1 4)) (Projection 3 4))
+modCheck = (comp2 equals (comp2 addition (comp2 multiplication (Projection 1 4) (Projection 4 4)) (Projection 2 4)) (Projection 3 4))
 mod = 
-    let a = Projection 1 2
-        b = Projection 2 2
+    let b = Projection 2 2
     in
-      mu (exists modCheck b) b
+      condZero (Projection 1 2) (always 2 (constant 0)) (condZero (comp2 equals (Projection 2 2) (always 2 (constant 1)))
+                                                                      (mu (exists modCheck (Projection 2 3)) b)
+                                                                      (always 2 (constant 0)))

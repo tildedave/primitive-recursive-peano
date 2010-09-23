@@ -66,23 +66,23 @@ newtype SmallNatural = Small Integer deriving Show
 instance Arbitrary SmallNatural where
     arbitrary =
         do
-          x <- choose (0,4)
+          x <- choose (0,20)
           return (Small x)
 
+{--
 checkPow :: SmallNatural -> SmallNatural -> Bool
 checkPow (Small a) (Small b) = eval pow [a,b] == b^a
+--}
 
-testAlways1 = TestCase (assertEqual
-                        "testAlways1"
-                        4
-                        (eval (always 3 (constant 4)) [1,2,3]))
-
-testAlways2 = TestCase (assertEqual
-                        "testAlways2"
-                        3
-                        (eval (always 3 (Projection 3 3)) [1,2,3]))
-
-alwaysTests = [ testAlways1, testAlways2 ]
+checkMod :: SmallNatural -> SmallNatural -> Bool
+checkMod (Small x) (Small y) = let answer = eval (BasePrimitiveRecursion.mod) [x,y]
+               in 
+                 if (y == 0) then 
+                     answer == 0 
+                 else
+                     let modulus = (x `Prelude.mod` y)
+                     in
+                       answer == modulus
 
 -- find x < 10 such that x >= 5
 testMu1 = TestCase (assertEqual 
@@ -96,10 +96,13 @@ testMu2 = TestCase (assertEqual
                     3
                     (eval (mu (comp2 gte (comp2 multiplication (Projection 1 1) (always 1 (constant 2))) (always 1 (constant 5))) (always 0 (constant 10))) []))
 
--- find x < 10 such that there is a y <= x with x * y >= 20
--- TODO: code that
+-- find x < 5 such that there is a y < 5 with x * y >= 10
+testMu3 = TestCase (assertEqual 
+                    "testMu3"
+                    3
+                    (eval (mu (exists (comp2 gte (comp2 multiplication (Projection 1 2) (Projection 2 2)) (always 0 (constant 10))) (always 0 (constant 5))) (always 0 (constant 5))) []))
 
-muTests = [ testMu1, testMu2 ]
+muTests = [ testMu1, testMu2, testMu3 ]
 
 doQuickChecks = do
   performQuickCheck "addition" checkAddition
@@ -110,7 +113,8 @@ doQuickChecks = do
   performQuickCheck "always" checkAlways
   performQuickCheck "constant" checkConstant
   performQuickCheck "comparison" checkComparison
-  performQuickCheck "pow" checkPow
+  --performQuickCheck "pow" checkPow
+  performQuickCheck "mod" checkMod
 
 doHUnitTests = do 
-  runTestTT (TestList (muTests ++ alwaysTests)) 
+  runTestTT (TestList (muTests)) 
