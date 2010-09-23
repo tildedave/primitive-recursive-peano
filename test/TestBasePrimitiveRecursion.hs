@@ -88,13 +88,13 @@ alwaysTests = [ testAlways1, testAlways2 ]
 testMu1 = TestCase (assertEqual 
                    "testMu1"
                    5
-                   (eval (mu (comp2 gte (Projection 1 1) (always 1 (constant 5))) (constant 10)) []))
+                   (eval (mu (comp2 gte (Projection 1 1) (always 1 (constant 5))) (always 0 (constant 10))) []))
 
 -- find x < 10 such that x * 2 >= 5
 testMu2 = TestCase (assertEqual
                     "testMu2"
                     3
-                    (eval (mu (comp2 gte (comp2 multiplication (Projection 1 1) (always 1 (constant 2))) (always 1 (constant 5))) (constant 10)) []))
+                    (eval (mu (comp2 gte (comp2 multiplication (Projection 1 1) (always 1 (constant 2))) (always 1 (constant 5))) (always 0 (constant 10))) []))
 
 -- find x < 10 such that there is a y <= x with x * y >= 20
 -- TODO: code that
