@@ -3,7 +3,8 @@ module Main
 
 import Test.QuickCheck
 import Control.Monad
-import qualified TestPrimitiveRecursion
+import qualified TestBasePrimitiveRecursion
 
 main = 
-    do TestPrimitiveRecursion.doQuickChecks
+    do TestBasePrimitiveRecursion.doQuickChecks
+       TestBasePrimitiveRecursion.doHUnitTests

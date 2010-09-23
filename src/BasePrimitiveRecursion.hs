@@ -1,4 +1,4 @@
-module PrimitiveRecursion
+module BasePrimitiveRecursion
     where
 
 import Natural
@@ -38,7 +38,9 @@ wff exp =
                    if (wffComposition) then 
                        True 
                    else
-                       error ("Invalid composition: " ++ (show exp) ++ " f arity: " ++ show (arity f) ++ " arity of gs: " ++ (show gsArity)))
+                       error ("Invalid composition: " ++ (show exp) ++ "\n" ++ 
+                              "f arity: " ++ show (arity f) ++ " (expected " ++ (show k) ++ ")\n" ++
+                              "gs arity: " ++ (show gsArity) ++ " (expected " ++ (show m)))
       Recursion k f g -> let wffRecursion = (wff f) && (wff g) && (arity f == k) && 
                                             (arity g == k + 2)
                          in
@@ -56,7 +58,12 @@ eval exp args =
                                  [] -> 0
                        Successor -> case args of
                                       [x] -> (x + 1)
-                       Projection i n -> args !! fromInteger (fromNatural (i - 1))
+                       Projection i n -> let index = fromInteger (fromNatural (i - 1)) 
+                                         in
+                                           if (index >= length args) then
+                                               error ("Invalid projection: " ++ (show exp) ++ " -- only " ++ (show (length args)) ++ " args")
+                                           else
+                                               args !! index
                        Composition k m f gs -> let egs = map (\g -> eval g args) gs
                                                in
                                                  eval f egs
@@ -69,7 +76,20 @@ eval exp args =
     in
       evalResult
 
-comp f g = Composition (arity f) (arity g) f [g]
+comp f gs = 
+    let gArity = if (length gs == 0) then
+                     0 
+                 else
+                     arity (head gs)
+    in
+      Composition (arity f) gArity f gs
+
+comp1 f g1 = comp f [g1]
+comp2 f g1 g2 = comp f [g1,g2]
+comp3 f g1 g2 g3 = comp f [g1,g2,g3]
+comp4 f g1 g2 g3 g4 = comp f [g1,g2,g3,g4]
+
+
 partialComp n f gs = 
     let wrappedGs = map (always n) gs
     in
@@ -80,12 +100,13 @@ primRecursion f g = Recursion (arity f) f g
 constant 0 = Zero
 constant n = let nminus1Expr = constant (n - 1)
              in
-                 comp Successor nminus1Expr
+                 comp1 Successor (nminus1Expr)
 
+--always k f = Composition (arity f) k f [(Projection i k) | i <- [1..k]]
 always k f = Composition (arity f) k f []
 
 addition = let baseFunction = (Projection 1 1)  
-               stepFunction = comp Successor (Projection 2 3)
+               stepFunction = comp1 Successor (Projection 2 3)
            in
              primRecursion baseFunction stepFunction
 
@@ -98,7 +119,7 @@ predecessor = let baseFunction = Zero  -- pred(0) = 0
 -- sub(n+1,m) = pred(sub(n,m))
 -- sub(n+1,m) = pred(proj_2(n,sub(n,m),m))
 subtraction = let baseFunction = (Projection 1 1)
-                  stepFunction = comp predecessor (Projection 2 3)
+                  stepFunction = comp1 predecessor (Projection 2 3)
               in
                 primRecursion baseFunction stepFunction
 
@@ -108,6 +129,13 @@ multiplication = let baseFunction = (always 1 Zero)
                  in
                    primRecursion baseFunction stepFunction
 
+-- pow(a,b) = b^a
+-- pow(a+1,b) = b^a * b
+-- pow(a+1,b) = g(a,pow(a,b),b)
+pow = let baseFunction = (always 1 (constant 1))
+          stepFunction = comp2 multiplication (Projection 2 3) (Projection 3 3)
+      in
+        primRecursion baseFunction stepFunction
 
 isZero = let baseFunction = (always 0 (constant 1))
              stepFunction = (always 2 (constant 0))
@@ -119,11 +147,11 @@ nonZero = let baseFunction = (always 0 (constant 0))
           in
             primRecursion baseFunction stepFunction
 
-lt = comp nonZero subtraction
-gte = comp isZero subtraction
+lt = comp1 nonZero subtraction
+gte = comp1 isZero subtraction
 
 identity = let baseFunction = Zero
-               stepFunction = comp Successor (Projection 1 2)
+               stepFunction = comp1 Successor (Projection 1 2)
            in
              primRecursion baseFunction stepFunction
 
@@ -133,17 +161,32 @@ prIf n f g = let baseFunction = f
            in
              primRecursion f stepFunction
 
-prCondZero h f g = let n = arity h 
+condZero h f g = let n = arity h 
                    in 
                      Composition (n+1) n (prIf n f g) (h:[(Projection k n) | k <- [1..n]])
 -- x == y if x \< y and y \< x
-equals = prCondZero
+{--
+equals = condZero
          (Composition 2 2 lt [(Projection 1 2),(Projection 2 2)])
-         (prCondZero
+         (condZero
           (Composition 2 2 lt [(Projection 2 2),(Projection 1 2)])
           (always 2 (constant 1))
           (always 2 (constant 0)))
          (always 2 (constant 0))
+--}
+
+equals = 
+    let x1 = Projection 1 2
+        x2 = Projection 2 2
+        trueAnswer = (always 2 (constant 1))
+        falseAnswer = (always 2 (constant 0))
+    in
+      condZero (comp2 lt x1 x2)
+                     (condZero
+                      (comp2 lt x2 x1)
+                      trueAnswer
+                      falseAnswer)
+                     falseAnswer
 
 -- prFoldLeft(f,i,x1...xn) = f(i,f(x1,f(x2,...,f(xn-1,xn))))
 prFoldArgsLeft n f i = 
@@ -166,45 +209,45 @@ prFoldArgsRight n f i =
       (Composition 2 n f [i,prFoldRightHelper n n])      
 
 -- IDEA: prMax(n1,prMax(n2,prMax(n3,...)))
-prMax = prCondZero lt (Projection 1 2) (Projection 2 2)
+prMax = condZero lt (Projection 1 2) (Projection 2 2)
 prMaximumList n = prFoldArgsLeft n prMax (always n Zero)
 
 -- starting i is the first argument
-prMin = prCondZero lt (Projection 2 2) (Projection 1 2)
+prMin = condZero lt (Projection 2 2) (Projection 1 2)
 prMinimumList n = prFoldArgsLeft n prMin (Projection 1 n)
 
-foldNat n f i = 
+fold n f i = 
     let baseFunction = i
-        stepFunction = Composition 2 (n+2) f [comp Successor (Projection 1 (n+2)),(Projection 2 (n+2))]
+        stepFunction = Composition 2 (n+2) f [comp1 Successor (Projection 1 (n+2)),(Projection 2 (n+2))]
     in
       primRecursion baseFunction stepFunction
 
-prFact = foldNat 0 multiplication (always 0 (constant 1))
-prTotal = foldNat 0 addition (always 0 (constant 0))
+factorial = fold 0 multiplication (always 0 (constant 1))
+sumAll = fold 0 addition (always 0 (constant 0))
 
 -- n args
 -- f is the function to check, takes n args
 -- bounded by k
 
-eval_fAtJ n f j = 
+eval_fAtJ n f j args = 
     let k = arity f 
     in 
-      Composition k n f (j:([(Projection i n) | i <- [1..n]]))
+      Composition k n f (j:args)
 
 baseMu n f p = let k = arity f
-                   eval_fAtZero = eval_fAtJ n f (constant 0)
+                   eval_fAtZero = eval_fAtJ n f (always n (constant 0)) [(Projection i n) | i <- [1..n]]
              in
-               prCondZero eval_fAtZero (always n (constant p)) (always n (constant 0))
+               condZero eval_fAtZero p (always n (constant 0))
 
 stepMu n f p = 
-    let i = comp Successor (Projection 1 (n + 2))
+    let i = comp1 Successor (Projection 1 (n + 2))
         r = Projection 2 (n + 2)
-        eval_fAtCurrent = eval_fAtJ (n + 2) f i  -- arity n
+        eval_fAtCurrent = eval_fAtJ (n + 2) f i [(Projection i (n + 2)) | i <- [3..n+2]]  -- arity n
     in
       (Composition 2 (n + 2)
                    prMin 
-                   [(prCondZero eval_fAtCurrent
-                                    (always (n + 2) (constant p))
+                   [(condZero eval_fAtCurrent
+                                    p
                                     i),
                     r])
 
@@ -214,7 +257,21 @@ mu f p =
         baseFunction = baseMu n f p
         stepFunction = stepMu n f p 
     in
-      Composition n (n + 1) 
+      Composition (n + 1) n
                       (primRecursion baseFunction stepFunction) 
-                      (always n (constant p):[(Projection k n) | k <- [1..n]])
+                      (p:[(Projection k n) | k <- [1..n]])
 
+exists f p =
+    let k = arity f
+        n = k - 1
+        muSearch = mu f p
+    in
+      condZero (comp2 equals muSearch p) (always n (constant 1)) (always n (constant 0))
+
+-- modCheck c d a b = b * d + c == a
+modCheck = (comp2 equals (comp2 addition (comp2 multiplication (Projection 2 4) (Projection 4 4)) (Projection 1 4)) (Projection 3 4))
+mod = 
+    let a = Projection 1 2
+        b = Projection 2 2
+    in
+      mu (exists modCheck b) b
