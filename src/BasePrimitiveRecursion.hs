@@ -2,14 +2,22 @@ module BasePrimitiveRecursion
     where
 
 import Natural
+import Debug.Trace
 
 data Function = 
     Zero |
     Successor | 
     Projection Natural Natural | 
     Composition Natural Natural Function [Function] |
-    Recursion Natural Function Function 
-    deriving Show
+    Recursion Natural Function Function  |
+    DebugThunk ([Natural] -> String) Function 
+
+instance Show Function where
+    show Zero = "Zero"
+    show Successor = "Successor"
+    show (Projection i j) = "Projection " ++ show i ++ " " ++ show j
+    show (Composition m n f gs) = show f ++ "(" ++ show gs ++ ")"
+    show (Recursion n f g) = "Recursion " ++ show n ++ " " ++ show f  ++ " " ++ show g
 
 arity exp = 
     case exp of 
@@ -18,6 +26,7 @@ arity exp =
       Projection i n -> n
       Composition k m f gs -> m
       Recursion k f g -> k + 1
+      DebugThunk df f -> arity f
 
 allSame [] = True
 allSame [x] = True
@@ -48,12 +57,14 @@ wff exp =
                                True
                            else
                                error ("Invalid recursion: " ++ show (exp))
+      DebugThunk df f -> wff f
     where wffList es = (foldr (&&) True (map wff es))
 
 
 -- TODO: thread Maybe monad through here
+eval :: Function -> [Natural] -> Natural
 eval exp args = 
-    let evalResult = case exp of 
+    let evalResult = case exp of
                        Zero -> case args of 
                                  [] -> 0
                        Successor -> case args of
@@ -73,6 +84,9 @@ eval exp args =
                                                           prCall = eval exp (prec:xs)
                                                       in
                                                         eval g (prec:prCall:xs)
+                       DebugThunk df f -> let result = (eval f args) 
+                                          in
+                                            trace (df args) result
     in
       evalResult
 
@@ -164,6 +178,7 @@ prIf n f g = let baseFunction = f
 condZero h f g = let n = arity h 
                    in 
                      Composition (n+1) n (prIf n f g) (h:[(Projection k n) | k <- [1..n]])
+
 -- x == y if x \< y and y \< x
 {--
 equals = condZero
@@ -229,6 +244,7 @@ sumAll = fold 0 addition (always 0 (constant 0))
 -- f is the function to check, takes n args
 -- bounded by k
 
+{--
 eval_fAtJ n f j args = 
     let k = arity f 
     in 
@@ -260,7 +276,38 @@ mu f p =
       Composition (n + 1) n
                       (primRecursion baseFunction stepFunction) 
                       (p:[(Projection k n) | k <- [1..n]])
+--}
 
+-- n = args to f
+baseMu2 n f = 
+    let m = (Projection 1 (n + 1))
+    in
+      (condZero (comp f ((always (n + 1) Zero):[Projection i (n + 1) | i <- [2..n+1]]))
+                m
+                (always (n + 1) Zero))
+
+stepMu2 n f =
+    -- arity should be n + 2
+    -- stepMu2(n+1,pr(n,----),MAX,----) = 
+    let i = Projection 1 (n + 3)
+        r = Projection 2 (n + 3)
+        m = Projection 3 (n + 3)
+    in
+      (condZero (comp2 lt r m) 
+                    (condZero (comp f (i:[Projection j (n + 3) | j <- [4..n+3]]))
+                              m
+                              i)
+                    r)
+
+mu f p = 
+    let k = (arity f) - 1
+        baseFunction = baseMu2 (k+1) f
+        stepFunction = stepMu2 (k+1) f
+    in
+      (comp
+       (primRecursion baseFunction stepFunction)
+       (p:p:[(Projection j k) | j <- [1..k]]))
+                     
 exists f p =
     let k = arity f
         n = k - 1
@@ -270,9 +317,37 @@ exists f p =
 
 -- modCheck c d a b = b * d + c == a
 modCheck = (comp2 equals (comp2 addition (comp2 multiplication (Projection 1 4) (Projection 4 4)) (Projection 2 4)) (Projection 3 4))
+-- mod x y = mod x y
 mod = 
     let b = Projection 2 2
     in
       condZero (Projection 1 2) (always 2 (constant 0)) (condZero (comp2 equals (Projection 2 2) (always 2 (constant 1)))
                                                                       (mu (exists modCheck (Projection 2 3)) b)
                                                                       (always 2 (constant 0)))
+
+-- isprime n = THERE DOES NOT EXIST A K < N WITH MOD K N = 0
+-- isprime n = if EXIST A MOD A N == 0 == n THEN 1 ELSE 0
+-- primehelper n 
+primehelper = 
+    let zero = always 2 (constant 0)
+        one = always 2 (constant 1)
+        a = (Projection 1 2)
+        b = (Projection 2 2)
+    in
+      condZero (comp2 equals zero a) 
+               (condZero (comp2 equals one a) 
+                         (condZero (comp2 equals a b)
+                                       (condZero (comp2 BasePrimitiveRecursion.mod b a) 
+                                                 one
+                                                 zero)
+                                       zero)
+                         zero)
+               zero
+isprime =
+    let a = Projection 1 1
+        one = always 1 (constant 1)
+        zero = always 1 (constant 0)
+    in
+      condZero (comp2 equals one a) 
+               (condZero (exists primehelper a) one zero)
+               (zero)

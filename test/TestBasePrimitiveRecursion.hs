@@ -75,34 +75,61 @@ checkPow (Small a) (Small b) = eval pow [a,b] == b^a
 --}
 
 checkMod :: SmallNatural -> SmallNatural -> Bool
-checkMod (Small x) (Small y) = let answer = eval (BasePrimitiveRecursion.mod) [x,y]
+checkMod (Small x) (Small y) = let answer = eval (BasePrimitiveRecursion.mod) [toNatural x,toNatural y]
                in 
                  if (y == 0) then 
                      answer == 0 
                  else
-                     let modulus = (x `Prelude.mod` y)
+                     let modulus = toNatural (x `Prelude.mod` y)
                      in
                        answer == modulus
 
 -- find x < 10 such that x >= 5
-testMu1 = TestCase (assertEqual 
-                   "testMu1"
-                   5
-                   (eval (mu (comp2 gte (Projection 1 1) (always 1 (constant 5))) (always 0 (constant 10))) []))
+testMu1 = TestLabel "testMu1"
+          (TestCase (assertEqual 
+                     "testMu1"
+                     5
+                     (eval (mu (comp2 gte (Projection 1 1) (always 1 (constant 5))) (always 0 (constant 10))) [])))
 
 -- find x < 10 such that x * 2 >= 5
-testMu2 = TestCase (assertEqual
-                    "testMu2"
-                    3
-                    (eval (mu (comp2 gte (comp2 multiplication (Projection 1 1) (always 1 (constant 2))) (always 1 (constant 5))) (always 0 (constant 10))) []))
+testMu2 = TestLabel "testMu2" 
+          (TestCase (assertEqual
+                     "testMu2"
+                     3
+                     (eval (mu (comp2 gte (comp2 multiplication (Projection 1 1) (always 1 (constant 2))) (always 1 (constant 5))) (always 0 (constant 10))) [])))
 
 -- find x < 5 such that there is a y < 5 with x * y >= 10
-testMu3 = TestCase (assertEqual 
-                    "testMu3"
-                    3
-                    (eval (mu (exists (comp2 gte (comp2 multiplication (Projection 1 2) (Projection 2 2)) (always 0 (constant 10))) (always 0 (constant 5))) (always 0 (constant 5))) []))
+testMu3 = TestLabel "testMu3"
+          (TestCase (assertEqual 
+                     "testMu3"
+                     3
+                     (eval (mu (exists (comp2 gte (comp2 multiplication (Projection 1 2) (Projection 2 2)) (always 0 (constant 10))) (always 0 (constant 5))) (always 0 (constant 5))) [])))
 
 muTests = [ testMu1, testMu2, testMu3 ]
+
+testExpectedPrimes = 
+    map
+    (\n -> 
+         TestLabel ("primality: " ++ (show n))
+                   (TestCase
+                    (assertEqual
+                     "testPrime"
+                     1
+                     (eval isprime [n]))))
+    [2,3,5,7,11,13,17]
+
+testExpectedComposites = 
+    map
+    (\n ->
+         TestLabel ("composite: " ++ (show n))
+                   (TestCase
+                    (assertEqual
+                     "testComposite"
+                     0
+                     (eval isprime [n]))))
+    [1,4,6,8,9,10,12,14,15]
+
+primeTests = testExpectedPrimes ++ testExpectedComposites
 
 doQuickChecks = do
   performQuickCheck "addition" checkAddition
@@ -117,4 +144,4 @@ doQuickChecks = do
   performQuickCheck "mod" checkMod
 
 doHUnitTests = do 
-  runTestTT (TestList (muTests)) 
+  runTestTT (TestList (muTests ++ primeTests)) 

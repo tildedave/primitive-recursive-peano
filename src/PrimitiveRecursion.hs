@@ -12,3 +12,13 @@
    * Verifying proofs would be annoying to write in Haskell so writing it in PR subset of Haskell is sure to also be annoying --
      figure out how to do this nicely!
 --}
+
+
+module PrimitiveRecursion
+    where
+
+import Natural
+
+data Function = 
+              Zero |
+              
