@@ -103,7 +103,7 @@ testMu3 = TestLabel "testMu3"
           (TestCase (assertEqual 
                      "testMu3"
                      3
-                     (eval (mu (exists (comp2 gte (comp2 multiplication (Projection 1 2) (Projection 2 2)) (always 0 (constant 10))) (always 0 (constant 5))) (always 0 (constant 5))) [])))
+                     (eval (mu (exists (comp2 gte (comp2 multiplication (Projection 1 2) (Projection 2 2)) (always 2 (constant 10))) (always 1 (constant 5))) (always 0 (constant 5))) [])))
 
 muTests = [ testMu1, testMu2, testMu3 ]
 

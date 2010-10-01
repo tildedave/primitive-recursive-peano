@@ -15,7 +15,7 @@ instance Num Natural where
     fromInteger = toNatural
     x + y               = toNatural (fromNatural x + fromNatural y)
     x - y               = let r = fromNatural x - fromNatural y in
-                            if r < 0 then error "Unnatural subtraction"
+                            if r < 0 then error $ "Unnatural subtraction: " ++ (show r)
                                      else toNatural r
     x * y               = toNatural (fromNatural x * fromNatural y)
     abs x               = x
